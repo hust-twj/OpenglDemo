@@ -1,0 +1,85 @@
+package com.husttwj.opengl.triangle;
+
+import android.opengl.GLES20;
+import android.opengl.GLSurfaceView;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+
+import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.opengles.GL10;
+
+/**
+ * Description ：
+ * Created by hust_twj on 2020/10/7.
+ */
+public class Triangle implements GLSurfaceView.Renderer{
+
+    private static final String vertexShaderResource = //顶点着色器
+            "attribute vec3 vPosition;" +
+                    "void main() {" +
+                    "  gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);" +
+                    "}";
+    private static final String fragmentShaderResource =//片段着色器
+            "precision mediump float;" +
+                    "uniform vec4 vColor;" +
+                    "void main() {" +
+                    "  gl_FragColor = vColor;" +
+                    "}";
+    private final float[] vertexCoords = new float[]{//顶点
+            0.0f, 0.5f, 0.0f, // top
+            -0.5f, -0.5f, 0.0f, // bottom left
+            0.5f, -0.5f, 0.0f  // bottom right
+    };
+    private final float color[] = {1.0f, 0f, 0f, 1.0f}; //red
+    private int mProgram;// 着色器程序
+    private FloatBuffer vertexFloatBuffer;// 顶点坐标数据
+
+    @Override
+    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+
+        GLES20.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);//设置清空屏幕后的背景色
+        int vertexShader = GLES20.glCreateShader(GLES20.GL_VERTEX_SHADER);//构建顶点着色器
+        GLES20.glShaderSource(vertexShader, vertexShaderResource);
+        GLES20.glCompileShader(vertexShader);
+        int fragmentShader = GLES20.glCreateShader(GLES20.GL_FRAGMENT_SHADER);//构建片段着色器
+        GLES20.glShaderSource(fragmentShader, fragmentShaderResource);
+        GLES20.glCompileShader(fragmentShader);
+        mProgram = GLES20.glCreateProgram();//构建着色器程序，并将顶点着色器和片段着色器链接进来
+        GLES20.glAttachShader(mProgram, vertexShader);
+        GLES20.glAttachShader(mProgram, fragmentShader);
+        GLES20.glLinkProgram(mProgram);
+        GLES20.glDeleteShader(vertexShader);//顶点着色器和片段着色器链接到着色器程序后就无用了
+        GLES20.glDeleteShader(fragmentShader);
+        vertexFloatBuffer = floatToBuffer(vertexCoords);//将定点坐标转换为需要的顶点数据格式
+    }
+
+    @Override
+    public void onSurfaceChanged(GL10 gl, int width, int height) {
+        GLES20.glViewport(0, 0, width, height);//设置视窗
+    }
+
+    @Override
+    public void onDrawFrame(GL10 gl) {
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);//清空屏幕，擦除屏幕上所有的颜色，用 glClearColor 定义的颜色填充
+        GLES20.glUseProgram(mProgram);//在当前 EGL 环境激活着色器程序
+        int positionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");//获取顶点着色器的 vPosition 成员句柄
+        GLES20.glEnableVertexAttribArray(positionHandle);//启用句柄
+        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT,
+                false, 3 * 4, vertexFloatBuffer);//设置顶点坐标数据
+        int colorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");//获取片元着色器的 vColor 成员句柄
+        GLES20.glUniform4fv(colorHandle, 1, color, 0);//设置颜色
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 3);//绘制三角形
+        GLES20.glDisableVertexAttribArray(positionHandle);//禁止顶点数组的句柄
+    }
+
+    private FloatBuffer floatToBuffer(float[] a) {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(a.length * 4); //float占4个字节
+        buffer.order(ByteOrder.nativeOrder());
+        FloatBuffer byteBuffer = buffer.asFloatBuffer();
+        byteBuffer.put(a);
+        byteBuffer.position(0);
+        return byteBuffer;
+    }
+}
